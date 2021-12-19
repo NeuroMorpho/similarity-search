@@ -1,0 +1,15 @@
+version: "3.9"
+services:
+    devweb:
+        build:
+          context: .
+          dockerfile: Dockerfile
+        ports:
+            - "5000:5000"
+        volumes:
+            - .:/code 
+            - /home:/home 
+        deploy:
+            resources:
+                limits:
+                    memory: 10G
