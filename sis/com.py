@@ -1,4 +1,5 @@
-import paramiko,datetime,requests,filecmp,psycopg2
+import paramiko,datetime,requests,filecmp
+import psycopg2
 import mysql.connector as mysc
 from . import cfg
 from datetime import date
@@ -96,6 +97,25 @@ def myconnect(f):
             return rv
 
     return myconnect_
+
+@myconnect
+def getneuronpartitions(cnx,seed,nparts):
+    """
+    Partitions all neurons in different random portions
+    """
+    cur = cnx.cursor()
+    stmt = "SELECT neuron_id from neuron ORDER BY RAND({})".format(seed)
+    cur.execute(stmt)
+    res = cur.fetchall()
+    res = [item[0] for item in res]
+    nids = len(res)
+    parts = []
+    for ix in range(nparts):
+        firstix = ix*(nids//nparts)
+        lastix = (ix+1)*(nids//nparts)-1
+        parts.append(res[firstix:lastix])
+    return parts
+
 
 @myconnect
 def dumpduplos(cnx,jdata,trueids,filename):
@@ -387,6 +407,20 @@ ORDER BY
     cnx.close()
     return dbset
 
+def scalecell(data,offset,scale):
+    dataset = data.copy()
+    dataset[offset] *= scale**2
+    dataset[offset+4] *= scale
+    dataset[offset+5] *= scale
+    dataset[offset+6] *= scale
+    dataset[offset+7] *= scale
+    dataset[offset+8] *= scale
+    dataset[offset+9] *= scale**2
+    dataset[offset+10] *= scale**3
+    dataset[offset+11] *= scale
+    dataset[offset+12] *= scale
+    return dataset
+
 @myconnect
 def geturlstoswcs(cnx,archive_name):
     def nametourl(neuron_name):
@@ -671,6 +705,7 @@ def getdataforids(data):
         })
     return newdata
 
+
 @pgconnect
 def gettrueduplicates(conn):
     cur = conn.cursor()
@@ -678,7 +713,6 @@ def gettrueduplicates(conn):
     cur.execute(stmt)
     res = cur.fetchall()
     return [getidfromname(item[0]) for item in res]
-
 
 @myconnect
 def filternames(conn,namelist,idlist):
@@ -707,7 +741,7 @@ def getrndneuronids(conn,nids,seed=0,exclude=[],selectfrom=[]):
     neuron.neuron_id 
     FROM 
         neuron 
-    WHERE 
+    where neuron.neuron_id < 134954
     {}
     {} 
     ORDER BY RAND({})

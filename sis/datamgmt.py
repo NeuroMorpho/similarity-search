@@ -1,12 +1,15 @@
+from ntpath import join
 import faiss
 from numpy.core.arrayprint import printoptions
 from numpy.lib.function_base import _digitize_dispatcher
+from sklearn import preprocessing
 from sklearn.decomposition import PCA
 import numpy as np
 from . import com
 import pyhash
 
 depdate = com.todaysdate()
+#depdate = '2020-06-30'
 
 def genIndexData(datadict,npcs=None):
     # Takes dictionary with datarows and neuron_ids as input
@@ -38,7 +41,7 @@ def genIndexData(datadict,npcs=None):
     print('Before dimensionality reduction: {}'.format(d))
 
     # Set number of components to explain for 99% of variance unless provided
-    pcaobj = PCA()
+    pcaobj = PCA('mle')
     # if npcs is None:
     #     pcaobj = PCA()
     # else:
@@ -261,6 +264,55 @@ def checkduplicatesinternal(prev_data,pvecmes,name_dict):
                 })
         i += 1
     return duplicatejson
+
+def checkscaled(prev_data,pvecmes,neuronids,n_neurons):
+
+    neuronids.append(0)
+    
+    datamtrx = np.reshape(np.asarray([pvecmes],dtype =np.float32),(1,121))
+
+    jointdata = np.append(prev_data.astype(np.float32),datamtrx, axis=0)
+    jointdata = np.ndarray(jointdata.shape,buffer=jointdata,dtype=np.float32)
+    jointdata = jointdata.astype(np.float32)
+    jointdata[np.isnan(jointdata)]=0
+    jointdata = preprocessing.normalize(jointdata, norm='l2')
+    pcaobj = PCA('mle')
+    pcaobj.fit(jointdata)
+    jointdata = pcaobj.transform(jointdata)
+    d = jointdata.shape[1]
+    index = faiss.IndexFlatL2(d)
+    index.add(jointdata) 
+    D, I = index.search(np.reshape(jointdata[-1,:],(1,d)), n_neurons+1)
+
+    result = {}
+    s = []
+    # for rowno in range(D.shape[0]):
+    #     # loop over similar neurons for each neuron in query
+    #     #TODO ugly hack not allowing more than one neuron in query in order to fit old solution
+    #     s =  I[rowno].tolist()
+    
+    prev_val= -1
+    indexes = I[0][0:(n_neurons+1)]
+    #change place with first value if in later values
+
+    for ix,val in enumerate(indexes):
+            
+        thisneuronid = neuronids[val]
+        #TODO check this! should it be here 
+        #if thisneuronid == neuronids[prev_val]:
+        #    continue
+        # if the neuron not in first place, change place
+
+        s.append({
+            "neuron_id": thisneuronid,
+            "similarity": float('%.7f'%(1-D[0][ix]))
+        })
+        prev_val = val
+        
+    result["similarityresult"] = s
+    result["status"] = 200
+    return result
+
 
         
 

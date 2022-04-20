@@ -9,6 +9,8 @@ from flask_cors import CORS, cross_origin
 from flask import request
 import random, pickle,time,faiss, os,sis.com,sis.datamgmt,sis.cfg
 
+from sklearn.preprocessing import scale
+
 from flask import Flask
 app = Flask(__name__)
 CORS(app)
@@ -354,6 +356,16 @@ def getDuplicatesfordata():
 
     result = sis.datamgmt.checkduplicatesinternal(g_datadict["datarows"],datadict,g_datadict["neuron_names"])
     return jsonify(result)
+
+@app.route('/getscaled/<int:neuron_id>/<float:scalefactor>/<int:n_neurons>', methods=['GET'])
+def getscaled(neuron_id,scalefactor,n_neurons):
+    #TODO Should also fetch data from db and add new data. 
+    neuronIndex = g_neuronids.index(neuron_id)
+    datadict = sis.com.scalecell(g_datadict["datarows"][neuronIndex],100,scalefactor)
+
+    result = sis.datamgmt.checkscaled(g_datadict["datarows"],datadict,g_neuronids,n_neurons)
+    return jsonify(result)
+
 
 @app.route('/getDupliMulti/<int:do_pca>/<int:neuron_id>/<int:n_neurons>', methods=['GET'])
 def getDupliMulti(do_pca,neuron_id,n_neurons,cortype): 
