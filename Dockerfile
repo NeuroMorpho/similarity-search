@@ -1,5 +1,5 @@
 # our base image
-FROM ubuntu:bionic
+FROM ubuntu:jammy
 
 # Install python and pip
 LABEL maintainer="bljungqu@gmu.edu"
@@ -13,13 +13,16 @@ RUN apt-get update
 RUN apt-get install -y resolvconf
 
 # install Python modules needed by the Python app
-COPY requirements.txt /app/
+COPY pyproject.toml /app/
     
 WORKDIR /app
 
 RUN python3 -m pip install -U pip
 
-RUN pip3 install --no-cache-dir -r /app/requirements.txt
+RUN pip3 install poetry
+RUN poetry config virtualenvs.create false
+RUN poetry install --no-dev
+
 
 # copy files required for the app to run
 COPY search.py /app/
@@ -28,7 +31,7 @@ COPY pvecmes_cache.pkl /app/
 COPY sum_cache.pkl /app/
 COPY meta_cache.pkl /app/
 COPY detailed_cache.pkl /app/
-COPY detailedpvec_cache.pkl /app/
+# COPY detailedpvec_cache.pkl /app/
 COPY sis/cfg.py /app/sis/
 COPY sis/com.py /app/sis/
 COPY sis/datamgmt.py /app/sis/

@@ -1,11 +1,11 @@
 import paramiko,datetime,requests,filecmp
-import psycopg2
+#import psycopg2
 import mysql.connector as mysc
 from . import cfg
 from datetime import date
 from sshtunnel import SSHTunnelForwarder
 
-mypkey = paramiko.RSAKey.from_private_key_file(cfg.keyfile_path)
+#mypkey = paramiko.RSAKey.from_private_key_file(cfg.keyfile_path)
 # if you want to use ssh password use - ssh_password='your ssh password', bellow
 
 sql_ip = '1.1.1.1.1'
@@ -49,7 +49,7 @@ def create_sftp_client(username, keyfilepath,host, port=22):
         pass
 
 
-def pgconnect(f):
+""" def pgconnect(f):
     #decorator for postgres operations
     def pgconnect_(*args, **kwargs):
         conn = psycopg2.connect(host="localhost",database="nmo", user="nmo", password="100neuralDB")
@@ -61,7 +61,7 @@ def pgconnect(f):
         finally:
             conn.close()
         return rv
-    return pgconnect_
+    return pgconnect_ """
 
 
 def myconnect(f):
@@ -548,7 +548,8 @@ WHERE
     return dbset
 
 @myconnect
-def getfromdbmes(cnx,postfix, domainid, whereclause="",depositiondate=todaysdate()):
+def getfromdbmes(cnx, postfix, domainid, whereclause="",
+                 depositiondate=todaysdate()):
     # Fetching detailed morphometrics + pvec
     cursor = cnx.cursor()
     tablename = "measurements{}".format(postfix)
@@ -556,12 +557,19 @@ def getfromdbmes(cnx,postfix, domainid, whereclause="",depositiondate=todaysdate
         domainquery = ''
         extratables = ''
     else:
-        domainquery = 'WHERE nc.neuron_id = mes.neuron_id AND nc.domain_id = sd.domain_id AND sd.domain_id IN {}'.format(domainid)
+        domainquery = """
+        WHERE nc.neuron_id = mes.neuron_id
+        AND nc.domain_id = sd.domain_id
+        AND sd.domain_id IN {}""".format(domainid)
         extratables = ',  neuron_completeness AS nc, structural_domain AS sd'
     query = """SELECT mes.* from {} AS mes{}
-            {}  
             {}
-            ORDER BY mes.neuron_id""".format(tablename,extratables,domainquery,whereclause)
+            {}
+            ORDER BY mes.neuron_id""".format(
+                tablename,
+                extratables,
+                domainquery,
+                whereclause)
 
     # query = """SELECT mes.* from {} AS mes{}
     #         INNER JOIN
@@ -706,13 +714,13 @@ def getdataforids(data):
     return newdata
 
 
-@pgconnect
+""" @pgconnect
 def gettrueduplicates(conn):
     cur = conn.cursor()
     stmt = "SELECT neuron_name from duplicateactions where action = 'delete'"
     cur.execute(stmt)
     res = cur.fetchall()
-    return [getidfromname(item[0]) for item in res]
+    return [getidfromname(item[0]) for item in res] """
 
 @myconnect
 def filternames(conn,namelist,idlist):

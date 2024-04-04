@@ -1,4 +1,3 @@
-# %%
 from faiss.swigfaiss import InvertedLists
 from numpy.lib.function_base import corrcoef
 import numpy as np
@@ -7,7 +6,7 @@ import pandas as pd
 from flask import jsonify
 from flask_cors import CORS, cross_origin
 from flask import request
-import random, pickle,time,faiss, os,sis.com,sis.datamgmt,sis.cfg
+import random, pickle, time, faiss, os, sis.com, sis.datamgmt, sis.cfg
 
 from sklearn.preprocessing import scale
 
@@ -15,14 +14,15 @@ from flask import Flask
 app = Flask(__name__)
 CORS(app)
 
-def vcorrcoef(X,y):
+
+def vcorrcoef(X, y):
     """
     Correlation coefficient computation
     """
-    Xm = np.reshape(np.mean(X,axis=1),(X.shape[0],1))
+    Xm = np.reshape(np.mean(X, axis=1), (X.shape[0], 1))
     ym = np.mean(y)
-    r_num = np.sum((X-Xm)*(y-ym),axis=1)
-    r_den = np.sqrt(np.sum((X-Xm)**2,axis=1)*np.sum((y-ym)**2))
+    r_num = np.sum((X-Xm)*(y-ym), axis=1)
+    r_den = np.sqrt(np.sum((X-Xm)**2, axis=1)*np.sum((y-ym)**2))
     r = r_num/r_den
     return r
 
@@ -32,8 +32,8 @@ def getrnddict(datadict):
     datadict['neuron_ids'] = [datadict['neuron_ids'][item] for item in rixs]
     return datadict
  
-@app.before_first_request
-@app.route('/initfaiss/<int:nrnd>', methods=['GET','POST'])
+#@app.before_request
+#@app.route('/initfaiss/<int:nrnd>', methods=['GET','POST'])
 def init_faiss(nrnd=0):
     """
     Calculates the different indexes
@@ -123,7 +123,7 @@ def init_faiss(nrnd=0):
 
     # detailed datastructures generation 
     global g_postfixes
-    g_postfixes = ['DAX','DEN','AX','NEU','PR']
+    g_postfixes = ['DAX', 'DEN', 'AX', 'NEU', 'PR']
     cachefilename = 'detailed_cache.pkl'
     if os.path.isfile(cachefilename):
         datadict = pickle.load(open(cachefilename, "rb"))
@@ -133,20 +133,32 @@ def init_faiss(nrnd=0):
         
         ap_den_dict = sis.datamgmt.genMtrxMes('AP',domain_ids['DEN'])
         bas_den_dict = sis.datamgmt.genMtrxMes('BS',domain_ids['DEN'])
-        datadict['DEN']= {'datarows':  np.hstack((ap_den_dict['datarows'], bas_den_dict['datarows'])), 
-            'neuron_ids': ap_den_dict['neuron_ids']} #enough with one since they are the same
+        datadict['DEN'] = {
+            'datarows':  np.vstack(
+                (ap_den_dict['datarows'],
+                 bas_den_dict['datarows'])),
+            'neuron_ids': ap_den_dict['neuron_ids'] +
+            bas_den_dict['neuron_ids']
+            }
         #concat apical and basal for dendrites and axons    
-        ap_dax_dict = sis.datamgmt.genMtrxMes('AP',domain_ids['DAX'])
-        bas_dax_dict = sis.datamgmt.genMtrxMes('BS',domain_ids['DAX'])
-        ax_dax_dict = sis.datamgmt.genMtrxMes('AX',domain_ids['DAX'])
-        datadict['DAX']= {'datarows':  np.hstack((ap_dax_dict['datarows'], bas_dax_dict['datarows'], ax_dax_dict['datarows'])), 
-            'neuron_ids': ap_dax_dict['neuron_ids']} #enough with one since they are the same
-
-        for item in g_postfixes[2:]: # Not first two
-            datadict[item] = sis.datamgmt.genMtrxMes(item,domain_ids[item])
+        ap_dax_dict = sis.datamgmt.genMtrxMes('AP', domain_ids['DAX'])
+        bas_dax_dict = sis.datamgmt.genMtrxMes('BS', domain_ids['DAX'])
+        ax_dax_dict = sis.datamgmt.genMtrxMes('AX', domain_ids['DAX'])
+        datadict['DAX'] = {
+            'datarows':  np.vstack(
+                (ap_dax_dict['datarows'],
+                 bas_dax_dict['datarows'],
+                 ax_dax_dict['datarows'])
+                 ),
+            'neuron_ids': ap_dax_dict['neuron_ids'] +
+            bas_dax_dict['neuron_ids'] +
+            ax_dax_dict['neuron_ids']
+            }
+        for item in g_postfixes[2:]:  # Not first two
+            datadict[item] = sis.datamgmt.genMtrxMes(item, domain_ids[item])
         
         # dump to datafile
-        pickle.dump(datadict,open(cachefilename, "wb"))
+        pickle.dump(datadict, open(cachefilename, "wb"))
 
     
     global g_detailed_datamtrx
@@ -161,8 +173,11 @@ def init_faiss(nrnd=0):
         #if nrnd != 0:
         #    datadict[item] = getrnddict(datadict[item])
 
-        (g_detailed_index[item], g_detailed_datamtrx[item], g_detailed_neuronids[item],not_used) = sis.datamgmt.genIndexData(datadict[item])
+        (g_detailed_index[item], g_detailed_datamtrx[item],
+         g_detailed_neuronids[item],
+         not_used) = sis.datamgmt.genIndexData(datadict[item])
     
+    """"
     # detailed + pvec datastructures generation 
     cachefilename = 'detailedpvec_cache.pkl'
     if os.path.isfile(cachefilename):
@@ -174,7 +189,9 @@ def init_faiss(nrnd=0):
         for item in g_postfixes: 
             print("Detailed and pvec: {}".format(item))
             neuronstring = ",".join([str(item) for item in g_detailed_neuronids[item]])
-            datadict[item]['datarows'] = np.hstack((datadict[item]['datarows'],sis.datamgmt.genMtrxPvec(neuronstring)['datarows']))
+            datadict[item]['datarows'] = np.hstack(
+                (g_detailed_datamtrx[item][0],
+                 sis.datamgmt.genMtrxPvec(neuronstring)['datarows']))
         
         # dump to datafile
         pickle.dump(datadict,open(cachefilename, "wb"))
@@ -192,7 +209,8 @@ def init_faiss(nrnd=0):
 #            datadict[item] = getrnddict(datadict[item])
 
         (g_detailedpvec_index[item], g_detailedpvec_datamtrx[item], g_detailedpvec_neuronids[item],not_used) = sis.datamgmt.genIndexData(datadict[item])
-    return jsonify({'neuronids': g_neuronids})
+    """
+    #return jsonify({'neuronids': g_neuronids})
 
 @app.route('/clearcache')
 def clearcache():
@@ -508,7 +526,8 @@ def getMulti(do_pca,neuron_id,n_neurons):
     result["response_time"] = time.time() - t
     return jsonify(result)   
 
-
+init_faiss(0)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
+    

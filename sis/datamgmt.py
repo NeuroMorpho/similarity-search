@@ -6,7 +6,7 @@ from sklearn import preprocessing
 from sklearn.decomposition import PCA
 import numpy as np
 from . import com
-import pyhash
+import mmh3
 
 depdate = com.todaysdate()
 #depdate = '2020-06-30'
@@ -95,8 +95,7 @@ def genMtrxMeta(*args,depositiondate=depdate):
     else:
         neuronstring = ''
     dataset = com.getfromdbmeta(neuronstring)
-    hasher = pyhash.murmur3_32()
-    dataset = [[line[0]] + [hasher(str(item)) for item in line[1:30]] for line in dataset]
+    dataset = [[line[0]] + [mmh3.hash(str(item)) for item in line[1:30]] for line in dataset]
     print('Creating data matrix for meta...')
     return genMtrx(dataset,0,1)
 
@@ -229,10 +228,14 @@ def checkduplicatesinternal(prev_data,pvecmes,name_dict):
 
     jointdata = np.append(prev_data.astype(np.float32),datamtrx, axis=0)
     jointdata = np.ndarray(jointdata.shape,buffer=jointdata,dtype=np.float32)
+    d = jointdata.shape[1]
     index = faiss.IndexFlatIP(d)
     #index = faiss.IndexFlatL2(d)
     index.add(jointdata) 
+    searchmtrx = np.reshape(datamtrx,(len(datamtrx),d))
+    nsearch = len(datamtrx)
     D, I = index.search(searchmtrx, 2)
+
 
     i = 0
     duplicatejson = []
@@ -367,3 +370,4 @@ def genResultFromVec(searchvector,n_neurons,indextouse, neuronids,simlimit=0.95)
     result["similar_neuron_ids"] = s
     result["status"] = 200
     return result
+

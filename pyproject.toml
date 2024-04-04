@@ -1,0 +1,27 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "my-project"
+version = "0.1.0"
+description = "My Python project"
+authors = ["Your Name <your@email.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+faiss-cpu = "^1.8.0"
+numpy = "^1.26.4"
+pandas = "^2.2.1"
+flask = "^3.0.2"
+flask-cors = "^4.0.0"
+scikit-learn = "^1.3.2"
+paramiko = "^2.8.0"
+requests = "^2.26.0"
+mysql-connector-python = "^8.3.0"
+sshtunnel = "^0.4.0"
+mmh3 = "^4.1.0"
+
+
+[tool.poetry.dev-dependencies]
+pytest = "^8.1.1"
