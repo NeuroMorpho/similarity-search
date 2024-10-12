@@ -1,10 +1,10 @@
 # Similarity search module
 Please note: cloning this repo will not result in a working solution, since connection with NeuroMorpho.Org database is not provided due to security reasons.
 However, the full solution, including data saved as .pkl files is available as a Docker image at Docker hub: https://hub.docker.com/repository/docker/neuromorpho/sis
-It is also deployed at live with http://cng-nmo-main.orc.gmu.edu/similarity/ as API root.
+It is also deployed live with https://neuromorpho.org/similarity/ as API root.
 
 ## API description
-The UI (available at neuromorpho.org, neuron detailed view) uses an underlying API which may be accessed with the following URL as a base URL: [http://cng-nmo-main.orc.gmu.edu/simNew/](http://cng-nmo-main.orc.gmu.edu/simNew/) . 
+The UI (available at neuromorpho.org, neuron detailed view) uses an underlying API which may be accessed with the following URL as a base URL: [https://neuromorpho.org/similarity](https://neuromorpho.org/similarity). 
 By adding strings to the base URL, the different methods of the API may be accessed, please see table below.
 
 | Method | Method URL | Parameters |
